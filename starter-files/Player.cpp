@@ -40,10 +40,10 @@ bool Simple::make_trump(const Card &upcard, bool is_dealer,
         int same_suit = 0;
         for (int i = 0; i < hand.size(); i++) {
             const Card &card = hand[i];
-            if (card.get_suit() == upcard.get_suit() &&
-        card.is_face_or_ace()) {
-            same_suit++;
-        }
+            if (card.get_suit(upcard.get_suit()) == upcard.get_suit() &&
+                card.is_face_or_ace()) {
+                same_suit++;
+            }
         }
         if (same_suit >= 2) {
             order_up_suit = upcard.get_suit();
@@ -51,6 +51,7 @@ bool Simple::make_trump(const Card &upcard, bool is_dealer,
         }
         return false;
     }
+    
     else if (round == 2) {
         Suit next_suit = Suit_next(upcard.get_suit());
         int next = 0;
@@ -109,6 +110,7 @@ Card Simple::lead_card(Suit trump) {
         hand.erase(hand.begin() + greatest);
         return temp;
     }
+    return hand[0];
 }
 
 Card Simple::play_card(const Card &led_card, Suit trump) {
@@ -150,9 +152,34 @@ Card Simple::play_card(const Card &led_card, Suit trump) {
     }
 };
 
+class Human : public Player {
+public:
+    Human(const std::string &name_in) : name(name_in) {}
+    const std::string & get_name() const override { return name;}
+    void add_card(const Card &c) override {
+        hand.push_back(c);
+    }
+    bool make_trump(const Card &, bool, int, Suit &) const override {
+        return false;
+    }
+    void add_and_discard(const Card &c) override {}
+    Card lead_card(Suit) override {
+        return hand.back();
+    }
+    Card play_card(const Card &, Suit) override {
+        return hand.back();
+    }
+private:
+    std:: string name;
+    std::vector<Card> hand;
+};
+
 Player * Player_factory(const std::string &name, const std::string &strategy) {
     if (strategy == "Simple") {
         return new Simple(name);
+    }
+    else if (strategy == "Human") {
+        return new Human(name);
     }
     else {
         assert(false);
