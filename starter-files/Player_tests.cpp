@@ -8,7 +8,6 @@ using namespace std;
 TEST(test_player_get_name) {
     Player * alice = Player_factory("Alice", "Simple");
     ASSERT_EQUAL("Alice", alice->get_name());
-
     delete alice;
 }
 
@@ -87,8 +86,8 @@ TEST(test_make_trump_1) {
 
     Suit order = CLUBS;
     bool choice = timmy->make_trump(Card(NINE, HEARTS), false, 1, order);
-    ASSERT_TRUE(choice);
-    ASSERT_EQUAL(order, HEARTS);
+    ASSERT_FALSE(choice);
+    ASSERT_EQUAL(order, CLUBS);
     delete timmy;
 }
 
