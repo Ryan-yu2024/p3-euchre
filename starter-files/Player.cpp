@@ -34,15 +34,16 @@ void Simple::add_card(const Card &c) {
 }
 
 bool Simple::make_trump(const Card &upcard, bool is_dealer, 
-    int round, Suit &order_up_suit) const {
+                        int round, Suit &order_up_suit) const {
     assert(round == 1 || round == 2);
+
     if (round == 1) {
         int same_suit = 0;
-        for (int i = 0; i < hand.size(); i++) {
+        for (size_t i = 0; i < hand.size(); ++i) {
             const Card &card = hand[i];
-            if (card.get_suit(upcard.get_suit()) == upcard.get_suit() &&
-                card.is_face_or_ace()) {
-                same_suit++;
+            // Round 1: printed suit only
+            if (card.get_suit() == upcard.get_suit() && card.is_face_or_ace()) {
+                ++same_suit;
             }
         }
         if (same_suit >= 2) {
@@ -50,125 +51,131 @@ bool Simple::make_trump(const Card &upcard, bool is_dealer,
             return true;
         }
         return false;
-    }
-    
-    else if (round == 2) {
+    } else { // round == 2
         Suit next_suit = Suit_next(upcard.get_suit());
         int next = 0;
-        for (int i = 0; i < hand.size(); i++) {
+        for (size_t i = 0; i < hand.size(); ++i) {
             const Card &card = hand[i];
-            if (card.get_suit() == next_suit && card.is_face_or_ace()) {
-                next++;
+            // Round 2: evaluate as-if next_suit were trump
+            if (card.get_suit(next_suit) == next_suit && card.is_face_or_ace()) {
+                ++next;
             }
         }
-        if (next >= 1 || is_dealer) {
+        if (next >= 1 || is_dealer) { // stick-the-dealer
             order_up_suit = next_suit;
             return true;
         }
         return false;
     }
-    return false;
 }
 
 void Simple::add_and_discard(const Card &upcard) {
-    assert(hand.size() >= 1);
-    hand.push_back(upcard);
-    int low = 0;
+  assert(hand.size() >= 1);
+  hand.push_back(upcard);
+  int low = 0;
     Suit trump = upcard.get_suit();
     for (int i = 0; i < hand.size(); i++) {
         if (Card_less(hand[i], hand[low], trump)) {
-            low = i;
+            low = static_cast<int>(i);
         }
     }
     hand.erase(hand.begin() + low);
 }
 
+
 Card Simple::lead_card(Suit trump) {
     assert(hand.size() >= 1);
-    int best = -1;
-    for (int i = 0; i < hand.size(); i++) {
-        if (hand[i].is_trump(trump) == false) {
-            if (best == -1 || Card_less(hand[i], hand[best], trump) == false) {
-                best = i;
-        }
-        
-        }
-    }
-    if (best > -1) {
-        Card temp = hand[best];
-        hand.erase(hand.begin() + best);
-        return temp;
-    }
-    else if (best == -1) {
-        int greatest = 0;
-        for (int i = 0; i < hand.size(); i++) {
-            if (Card_less(hand[i], hand[greatest], trump) == false) {
-                greatest = i;
+    int best_nontrump = -1;
+    for (size_t i = 0; i < hand.size(); ++i) {
+        if (!hand[i].is_trump(trump)) {
+            if (best_nontrump == -1 || !Card_less(hand[i], hand[best_nontrump], trump)) {
+                best_nontrump = static_cast<int>(i);
             }
         }
-        Card temp = hand[greatest];
-        hand.erase(hand.begin() + greatest);
-        return temp;
     }
-    return hand[0];
+    if (best_nontrump != -1) {
+        Card out = hand[best_nontrump];
+        hand.erase(hand.begin() + best_nontrump);
+        return out;
+    }
+    int best = 0;
+    for (size_t i = 1; i < hand.size(); ++i) {
+        if (!Card_less(hand[i], hand[best], trump)) best = static_cast<int>(i);
+    }
+    Card out = hand[best];
+    hand.erase(hand.begin() + best);
+    return out;
 }
+
 
 Card Simple::play_card(const Card &led_card, Suit trump) {
     assert(hand.size() >= 1); 
-    vector<Card> v;
+    vector<Card> follow;
     Suit wanted_suit = led_card.get_suit(trump);
-    for (int i = 0; i < hand.size(); i++) {
+
+    for (size_t i = 0; i < hand.size(); ++i) {
         if (hand[i].get_suit(trump) == wanted_suit) {
-            v.push_back(hand[i]);
+            follow.push_back(hand[i]);
         }
     }
-    if (v.empty() == false) {
+
+    if (!follow.empty()) {
+        // play highest of the led suit
         int best = 0;
-        for (int i = 0; i < v.size(); i++) {
-            if (Card_less(v[i], v[best], trump) == false) {
-                best = i;
-            }
+        for (size_t i = 1; i < follow.size(); ++i) {
+            if (!Card_less(follow[i], follow[best], trump)) best = static_cast<int>(i);
         }
-        Card temp = v[best];
-        for (int i = 0; i < hand.size(); i++) {
-            if (hand[i] == temp) {
-                hand.erase(hand.begin() + i);
+        Card chosen = follow[best];
+        // remove chosen from hand
+        for (size_t i = 0; i < hand.size(); ++i) {
+            if (hand[i] == chosen) {
+                hand.erase(hand.begin() + static_cast<int>(i));
                 break;
             }
         }
-        return temp;
-        
-    }
-    else {
+        return chosen;
+    } else {
+        // cannot follow suit: play lowest card
         int worst = 0;
-        for (int i = 0; i < hand.size(); i++) {
-            if (Card_less(hand[i], hand[worst], trump)) {
-                worst = i;
-            }
+        for (size_t i = 1; i < hand.size(); ++i) {
+            if (Card_less(hand[i], hand[worst], trump)) worst = static_cast<int>(i);
         }
-        Card temp = hand[worst];
+        Card chosen = hand[worst];
         hand.erase(hand.begin() + worst);
-        return temp;
+        return chosen;
     }
-};
+}
 
 class Human : public Player {
 public:
     Human(const std::string &name_in) : name(name_in) {}
     const std::string & get_name() const override { return name;}
-    void add_card(const Card &c) override {
+
+   void add_card(const Card &c) override {
         hand.push_back(c);
     }
+
     bool make_trump(const Card &, bool, int, Suit &) const override {
         return false;
     }
-    void add_and_discard(const Card &c) override {}
+
+    void add_and_discard(const Card &c) override {
+        hand.push_back(c);
+        hand.pop_back();
+    }
+
     Card lead_card(Suit) override {
-        return hand.back();
+        Card c = hand.back();
+        hand.pop_back();
+        return c;
     }
+
     Card play_card(const Card &, Suit) override {
-        return hand.back();
+        Card c = hand.back();
+        hand.pop_back();
+        return c;
     }
+
 private:
     std:: string name;
     std::vector<Card> hand;
