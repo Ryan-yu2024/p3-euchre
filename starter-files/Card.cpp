@@ -2,6 +2,7 @@
 #include <iostream>
 #include <array>
 #include "Card.hpp"
+#include <string>
 
 using namespace std;
 
@@ -125,7 +126,7 @@ bool Card::is_left_bower(Suit trump) const {
 }
 
 bool Card::is_trump(Suit trump) const {
-  return suit == trump || is_left_bower(trump);
+  return get_suit(trump) == trump;
 }
 // NOTE: We HIGHLY recommend you check out the operator overloading
 // tutorial in the project spec before implementing
@@ -145,10 +146,18 @@ ostream &operator<<(ostream &os, const Card &card) {
 }
 
 istream &operator>>(istream &is, Card &card) {
-  string next_word;
   Rank rank;
+  string of_word;
   Suit suit;
-  is >> rank >> next_word >> suit;
+  
+  if (!(is >> rank)) return is;
+  if(!(is >> of_word)) return is;
+  if (of_word != "of") {
+    is.setstate(std::ios::failbit);
+    return is;
+  }
+  if (!(is >> suit)) return is;
+
   card = Card(rank, suit);
   return is;
 }
@@ -200,34 +209,42 @@ Suit Suit_next(Suit s) {
   return SPADES;
 }
 
+static int rank_strength(Rank r) { return static_cast<int>(r); }
+
 bool Card_less(const Card &a, const Card &b, Suit trump) {
-  if (a.is_trump(trump) && !b.is_trump(trump)) {
-    return false;
-  }
-  else if (!a.is_trump(trump) && b.is_trump(trump)) {
-    return true;
-  }
-  else {
-    return a < b;
-  }
+  if (a.is_right_bower(trump)) return false;
+  if (b.is_right_bower(trump)) return true;
+  if (a.is_left_bower(trump)) return false;
+  if (b.is_left_bower(trump)) return true;
+
+  const bool a_trump = a.is_trump(trump);
+  const bool b_trump = b.is_trump(trump);
+
+  if (a_trump != b_trump) return !a_trump && b_trump;
+  if (a_trump && b_trump)
+    return rank_strength(a.get_rank()) < rank_strength(b.get_rank());
+
+  return rank_strength(a.get_rank()) < rank_strength(b.get_rank());
 }
 
 bool Card_less(const Card &a, const Card &b, const Card &led_card, Suit trump) {
   Suit led_suit = led_card.get_suit(trump);
-  bool a_next = (a.get_suit(trump) == led_suit);
-  bool b_next = (b.get_suit(trump) == led_suit);
 
-  if (a.is_trump(trump) && !b.is_trump(trump)) {
-    return false;
-  }
-  if (!a.is_trump(trump) && b.is_trump(trump)) {
-    return true;
-  }
-  if (a_next && !b_next) {
-    return false;
-  }
-  if (!a_next && b_next) {
-    return true;
-  }
-  return a < b;
+  if (a.is_right_bower(trump)) return false;
+  if (b.is_right_bower(trump)) return true;
+  if (a.is_left_bower(trump)) return false;
+  if (b.is_left_bower(trump)) return true;
+  
+  const bool a_trump = a.is_trump(trump);
+  const bool b_trump = b.is_trump(trump);
+
+  if (a_trump != b_trump) return !a_trump && b_trump;
+  if (a_trump && b_trump)
+    return rank_strength(a.get_rank()) < rank_strength(b.get_rank());
+
+  const bool a_follows = (a.get_suit(trump) == led_suit);
+  const bool b_follows = (b.get_suit(trump) == led_suit);
+  if (a_follows != b_follows) return !a_follows && b_follows;
+
+  return rank_strength(a.get_rank()) < rank_strength(b.get_rank());
 }
