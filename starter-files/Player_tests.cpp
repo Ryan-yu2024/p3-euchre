@@ -48,6 +48,19 @@ TEST(test_lead_card_not_trump) {
     delete marley;
 }
 
+TEST(test_lead_no_trump) {
+    Player *farquad = Player_factory("Farquad", "Simple");
+    farquad->add_card(Card(NINE, CLUBS));
+    farquad->add_card(Card(TEN, DIAMONDS));
+    farquad->add_card(Card(QUEEN, HEARTS));
+    farquad->add_card(Card(KING, SPADES));
+    farquad->add_card(Card(ACE, DIAMONDS));
+
+    Card led = farquad->lead_card(HEARTS);
+    ASSERT_EQUAL(led, Card(ACE, DIAMONDS));
+    delete farquad;
+}
+
 TEST(test_play_card_trump) {
     Player *squidward = Player_factory("Squidward", "Simple");
     squidward->add_card(Card(TEN, HEARTS));
@@ -166,6 +179,71 @@ TEST(test_make_trump_2_pass) {
     delete patrick;
 }
 
+TEST(test_make_trump_second_round_should_call) {
+    Player *scooby = Player_factory("Scooby", "Simple");
+    scooby->add_card(Card(NINE, SPADES));
+    scooby->add_card(Card(JACK, SPADES));
+    scooby->add_card(Card(TEN, HEARTS));
+    scooby->add_card(Card(QUEEN, HEARTS));
+    scooby->add_card(Card(KING, HEARTS));
+
+    Suit order = SPADES;
+    bool choice = scooby->make_trump(Card(TEN, CLUBS), false, 2, order);
+
+    ASSERT_TRUE(choice);
+    ASSERT_EQUAL(order, SPADES);
+    delete scooby;
+}
+
+TEST(test_screw_the_dealer) {
+    Player *shrek = Player_factory("Shrek", "Simple");
+    shrek->add_card(Card(NINE, CLUBS));
+    shrek->add_card(Card(QUEEN, HEARTS));
+    shrek->add_card(Card(KING, SPADES));
+    shrek->add_card(Card(TEN, DIAMONDS));
+    shrek->add_card(Card(JACK, DIAMONDS));
+    
+    Card upcard(JACK, HEARTS);
+    Suit order = SPADES;
+
+    bool choice = shrek->make_trump(upcard, true, 2, order);
+    ASSERT_TRUE(choice);
+    ASSERT_NOT_EQUAL(order, upcard.get_suit());
+
+    delete shrek;
+}
+
+//when Simple player should order up bc have right bower
+TEST(make_trump_first_round) {
+    Player *donkey = Player_factory("Donkey", "Simple");
+    donkey->add_card(Card(JACK, HEARTS));
+    donkey->add_card(Card(KING, DIAMONDS));
+    donkey->add_card(Card(QUEEN, SPADES));
+    donkey->add_card(Card(TEN, CLUBS));
+    donkey->add_card(Card(ACE, SPADES));
+
+    Suit order = CLUBS;
+    bool choice = donkey->make_trump(Card(NINE, HEARTS), false, 1, order);
+
+    ASSERT_FALSE(choice);
+    ASSERT_EQUAL(order, CLUBS);
+    delete donkey;
+}
+
+TEST(test_play_card_follow_suit) {
+    Player *fiona = Player_factory("Fiona", "Simple");
+    fiona->add_card(Card(NINE, SPADES));
+    fiona->add_card(Card(KING, SPADES));
+    fiona->add_card(Card(QUEEN, HEARTS));
+    fiona->add_card(Card(JACK, HEARTS));
+    fiona->add_card(Card(ACE, HEARTS));
+
+    Card lead = Card(TEN, HEARTS);
+    Card played = fiona->play_card(lead, CLUBS);
+    ASSERT_EQUAL(played, Card(ACE, HEARTS));
+    delete fiona;
+}
+
 TEST(test_add_and_discard) {
     Player *gary = Player_factory("Gary", "Simple");
     gary->add_card(Card(TEN, HEARTS));
@@ -188,6 +266,27 @@ TEST(test_add_and_discard) {
 
     ASSERT_FALSE(still_has_lowest);
     delete gary;
+}
+
+TEST(test_add_and_discard_trump_replacement) {
+    Player *fred = Player_factory("Fred", "Simple");
+    fred->add_card(Card(NINE, DIAMONDS));
+    fred->add_card(Card(JACK, DIAMONDS));
+    fred->add_card(Card(QUEEN, HEARTS));
+    fred->add_card(Card(KING, CLUBS));
+    fred->add_card(Card(ACE, CLUBS));
+
+    fred->add_and_discard(Card(JACK, HEARTS));
+
+    Card trump_card(JACK, HEARTS);
+    bool has_trump = false;
+
+    for (int i = 0; i < 5; i++) {
+        Card trump = fred->lead_card(HEARTS);
+        if (trump == trump_card) has_trump = true; 
+    }
+    ASSERT_TRUE(has_trump);
+    delete fred;
 }
 
 TEST_MAIN()
