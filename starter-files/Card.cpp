@@ -1,88 +1,63 @@
+// Card.cpp
 #include <cassert>
 #include <iostream>
 #include <array>
-#include "Card.hpp"
 #include <string>
+#include "Card.hpp"
 
 using namespace std;
 
-/////////////// Rank operator implementations - DO NOT CHANGE ///////////////
+// Rank helpers (given interface)
 
 constexpr const char *const RANK_NAMES[] = {
-  "Two",   // TWO
-  "Three", // THREE
-  "Four",  // FOUR
-  "Five",  // FIVE
-  "Six",   // SIX
-  "Seven", // SEVEN
-  "Eight", // EIGHT
-  "Nine",  // NINE
-  "Ten",   // TEN
-  "Jack",  // JACK
-  "Queen", // QUEEN
-  "King",  // KING
-  "Ace"    // ACE
+  "Two", "Three", "Four", "Five", "Six", "Seven",
+  "Eight", "Nine", "Ten", "Jack", "Queen", "King", "Ace"
 };
 
-//REQUIRES str represents a valid rank ("Two", "Three", ..., "Ace")
-//EFFECTS returns the Rank corresponding to str, for example "Two" -> TWO
 Rank string_to_rank(const std::string &str) {
-  for(int r = TWO; r <= ACE; ++r) {
+  for (int r = TWO; r <= ACE; ++r) {
     if (str == RANK_NAMES[r]) {
       return static_cast<Rank>(r);
     }
   }
-  assert(false); // Input string didn't match any rank
+  assert(false);
   return {};
 }
 
-//EFFECTS Prints Rank to stream, for example "Two"
 std::ostream & operator<<(std::ostream &os, Rank rank) {
   os << RANK_NAMES[rank];
   return os;
 }
 
-//REQUIRES If any input is read, it must be a valid rank
-//EFFECTS Reads a Rank from a stream, for example "Two" -> TWO
 std::istream & operator>>(std::istream &is, Rank &rank) {
   string str;
-  if(is >> str) {
+  if (is >> str) {
     rank = string_to_rank(str);
   }
   return is;
 }
 
-
-
-/////////////// Suit operator implementations - DO NOT CHANGE ///////////////
+// Suit helpers (given interface)
 
 constexpr const char *const SUIT_NAMES[] = {
-  "Spades",   // SPADES
-  "Hearts",   // HEARTS
-  "Clubs",    // CLUBS
-  "Diamonds", // DIAMONDS
+  "Spades", "Hearts", "Clubs", "Diamonds",
 };
 
-//REQUIRES str represents a valid suit ("Spades", "Hearts", "Clubs", or "Diamonds")
-//EFFECTS returns the Suit corresponding to str, for example "Clubs" -> CLUBS
 Suit string_to_suit(const std::string &str) {
-  for(int s = SPADES; s <= DIAMONDS; ++s) {
+  for (int s = SPADES; s <= DIAMONDS; ++s) {
     if (str == SUIT_NAMES[s]) {
       return static_cast<Suit>(s);
     }
   }
-  assert(false); // Input string didn't match any suit
+  assert(false);
   return {};
 }
 
-//EFFECTS Prints Suit to stream, for example "Spades"
 std::ostream & operator<<(std::ostream &os, Suit suit) {
   os << SUIT_NAMES[suit];
   return os;
 }
 
-//REQUIRES If any input is read, it must be a valid suit
-//EFFECTS Reads a Suit from a stream, for example "Spades" -> SPADES
 std::istream & operator>>(std::istream &is, Suit &suit) {
   string str;
   if (is >> str) {
@@ -91,21 +66,16 @@ std::istream & operator>>(std::istream &is, Suit &suit) {
   return is;
 }
 
-
-/////////////// Write your implementation for Card below ///////////////
+// Card implementation
 Card::Card() : rank(TWO), suit(SPADES) {}
 
 Card::Card(Rank rank_in, Suit suit_in)
   : rank(rank_in), suit(suit_in) {}
 
-Rank Card::get_rank() const {
-  return rank;
-}
+Rank Card::get_rank() const { return rank; }
+Suit Card::get_suit() const { return suit; }
 
-Suit Card::get_suit() const {
-  return suit;
-}
-
+// Left bower counts as trump suit.
 Suit Card::get_suit(Suit trump) const {
   if (is_left_bower(trump)) {
     return trump;
@@ -113,14 +83,14 @@ Suit Card::get_suit(Suit trump) const {
   return suit;
 }
 
-bool Card::is_face_or_ace() const{
+bool Card::is_face_or_ace() const {
   return rank == JACK || rank == QUEEN || rank == KING || rank == ACE;
 }
 
 bool Card::is_right_bower(Suit trump) const {
   return rank == JACK && suit == trump;
-  
 }
+
 bool Card::is_left_bower(Suit trump) const {
   return rank == JACK && suit == Suit_next(trump);
 }
@@ -128,123 +98,111 @@ bool Card::is_left_bower(Suit trump) const {
 bool Card::is_trump(Suit trump) const {
   return get_suit(trump) == trump;
 }
-// NOTE: We HIGHLY recommend you check out the operator overloading
-// tutorial in the project spec before implementing
-// the following operator overload functions:
-//   operator<<
-//   operator>>
-//   operator<
-//   operator<=
-//   operator>
-//   operator>=
-//   operator==
-//   operator!=
 
+// Stream ops & relops 
 ostream &operator<<(ostream &os, const Card &card) {
   os << card.get_rank() << " of " << card.get_suit();
   return os;
 }
 
 istream &operator>>(istream &is, Card &card) {
-  Rank rank;
+  Rank r;
   string of_word;
-  Suit suit;
-  
-  if (!(is >> rank)) return is;
-  if(!(is >> of_word)) return is;
-  if (of_word != "of") {
-    is.setstate(std::ios::failbit);
-    return is;
-  }
-  if (!(is >> suit)) return is;
+  Suit s;
 
-  card = Card(rank, suit);
+  if (!(is >> r)) return is;
+  if (!(is >> of_word)) return is;
+  if (of_word != "of") { is.setstate(std::ios::failbit); return is; }
+  if (!(is >> s)) return is;
+
+  card = Card(r, s);
   return is;
 }
 
-bool operator<(const Card &left, const Card &right) {
-  if (static_cast<int>(left.get_rank()) < static_cast<int>(right.get_rank())) {
-    return true;
-  } else if (static_cast<int>(left.get_rank()) > static_cast<int>(right.get_rank())) {
-    return false;
-  } else {
-    return static_cast<int>(left.get_suit()) < static_cast<int>(right.get_suit());
+// Natural order (no trump/led): rank, then suit tie-break.
+bool operator<(const Card &lhs, const Card &rhs) {
+  if (lhs.get_rank() != rhs.get_rank()) {
+    return static_cast<int>(lhs.get_rank()) <
+           static_cast<int>(rhs.get_rank());
   }
+  return static_cast<int>(lhs.get_suit()) <
+         static_cast<int>(rhs.get_suit());
 }
 
-bool operator>(const Card &left, const Card&right) {
-  return right < left;
-}
+bool operator>(const Card &l, const Card &r)  { return r < l; }
+bool operator<=(const Card &l, const Card &r) { return !(r < l); }
+bool operator>=(const Card &l, const Card &r) { return !(l < r); }
 
-bool operator<=(const Card &left, const Card&right) {
-  return !(right < left);
+bool operator==(const Card &l, const Card &r) {
+  return l.get_rank() == r.get_rank() && l.get_suit() == r.get_suit();
 }
+bool operator!=(const Card &l, const Card &r) { return !(l == r); }
 
-bool operator>=(const Card &left, const Card&right) {
-  return !(left < right);
-}
+// Helpers
 
-bool operator==(const Card &left, const Card &right) {
-  return left.get_rank() == right.get_rank() &&
-         left.get_suit() == right.get_suit();
-}
-
-bool operator!=(const Card &left, const Card &right) {
-  return !(left == right);
-}
-
+// Same-color mapping for left bower: H <-> D, C <-> S
 Suit Suit_next(Suit s) {
-  if (s == HEARTS) {
-    return DIAMONDS;
-  }
-  if (s == DIAMONDS) {
-    return HEARTS;
-  }
-  if (s == CLUBS) {
-    return SPADES;
-  }
-  if (s == SPADES) {
-    return CLUBS;
-  }
-  return SPADES;
+  if (s == HEARTS)   return DIAMONDS;
+  if (s == DIAMONDS) return HEARTS;
+  if (s == CLUBS)    return SPADES;
+  if (s == SPADES)   return CLUBS;
+  return SPADES;  // never reached
 }
 
-static int rank_strength(Rank r) { return static_cast<int>(r); }
+// Factorized bower comparison to avoid duplication in Card_less.
+static int compare_bowers(const Card &a, const Card &b, Suit trump) {
+  // +1 if a > b due to bower, -1 if a < b, 0 if neither determines
+  if (a.is_right_bower(trump)) return b.is_right_bower(trump) ? 0 : +1;
+  if (b.is_right_bower(trump)) return -1;
+  if (a.is_left_bower(trump))  return b.is_left_bower(trump)  ? 0 : +1;
+  if (b.is_left_bower(trump))  return -1;
+  return 0;
+}
 
+// Contextual comparisons
 bool Card_less(const Card &a, const Card &b, Suit trump) {
-  if (a.is_right_bower(trump)) return false;
-  if (b.is_right_bower(trump)) return true;
-  if (a.is_left_bower(trump)) return false;
-  if (b.is_left_bower(trump)) return true;
+  if (int cmp = compare_bowers(a, b, trump)) return cmp < 0;
 
   const bool a_trump = a.is_trump(trump);
   const bool b_trump = b.is_trump(trump);
 
+  // Any trump beats any non-trump.
   if (a_trump != b_trump) return !a_trump && b_trump;
-  if (a_trump && b_trump)
-    return rank_strength(a.get_rank()) < rank_strength(b.get_rank());
 
-  return rank_strength(a.get_rank()) < rank_strength(b.get_rank());
+  // Both trump or both non-trump: rank, then suit tie-break.
+  int ra = static_cast<int>(a.get_rank());
+  int rb = static_cast<int>(b.get_rank());
+  if (ra != rb) return ra < rb;
+  return a.get_suit() < b.get_suit();
 }
 
-bool Card_less(const Card &a, const Card &b, const Card &led_card, Suit trump) {
-  Suit led_suit = led_card.get_suit(trump);
+bool Card_less(const Card &a, 
+               const Card &b,
+               const Card &led_card, 
+               Suit trump) {
+  const Suit led_suit = led_card.get_suit(trump);
 
-  if (a.is_right_bower(trump)) return false;
-  if (b.is_right_bower(trump)) return true;
-  if (a.is_left_bower(trump)) return false;
-  if (b.is_left_bower(trump)) return true;
-  
+  if (int cmp = compare_bowers(a, b, trump)) return cmp < 0;
+
   const bool a_trump = a.is_trump(trump);
   const bool b_trump = b.is_trump(trump);
 
   if (a_trump != b_trump) return !a_trump && b_trump;
-  if (a_trump && b_trump)
-    return rank_strength(a.get_rank()) < rank_strength(b.get_rank());
 
+  if (a_trump && b_trump) {
+    int ra = static_cast<int>(a.get_rank());
+    int rb = static_cast<int>(b.get_rank());
+    if (ra != rb) return ra < rb;
+    return a.get_suit() < b.get_suit();
+  }
+
+  // Neither trump: following led suit beats not following.
   const bool a_follows = (a.get_suit(trump) == led_suit);
   const bool b_follows = (b.get_suit(trump) == led_suit);
   if (a_follows != b_follows) return !a_follows && b_follows;
 
-  return rank_strength(a.get_rank()) < rank_strength(b.get_rank());
+  int ra = static_cast<int>(a.get_rank());
+  int rb = static_cast<int>(b.get_rank());
+  if (ra != rb) return ra < rb;
+  return a.get_suit() < b.get_suit();
 }
