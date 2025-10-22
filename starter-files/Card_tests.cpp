@@ -1,6 +1,8 @@
+// Card Tests
 #include "Card.hpp"
 #include "unit_test_framework.hpp"
 #include <iostream>
+#include <algorithm>
 #include <sstream>
 #include <string>
 
